@@ -36,29 +36,32 @@ class ResourceManager:
         import logging
         logger = logging.getLogger(__name__)
         
-        logger.info(f"🔍 Looking up resource URI: {uri}")
-        logger.info(f"🔍 URI bytes: {uri.encode('utf-8')}")
-        logger.info(f"🔍 URI repr: {repr(uri)}")
+        # Convert URI to string in case it's an AnyUrl object
+        uri_str = str(uri)
+        
+        logger.info(f"🔍 Looking up resource URI: {uri_str}")
+        logger.info(f"🔍 URI bytes: {uri_str.encode('utf-8')}")
+        logger.info(f"🔍 URI repr: {repr(uri_str)}")
         
         # Debug: Check exact matches
         for available_uri in PAGES_BY_URI.keys():
             logger.info(f"🔍 Comparing with: {repr(available_uri)} (bytes: {available_uri.encode('utf-8')})")
-            if uri == available_uri:
+            if uri_str == available_uri:
                 logger.info(f"✅ Found exact match!")
                 break
         
-        page_config = PAGES_BY_URI.get(uri)
+        page_config = PAGES_BY_URI.get(uri_str)
         if not page_config:
-            logger.error(f"❌ URI not found in PAGES_BY_URI: {uri}")
+            logger.error(f"❌ URI not found in PAGES_BY_URI: {uri_str}")
             logger.info(f"📋 Available URIs: {list(PAGES_BY_URI.keys())}")
             return None
         
-        logger.info(f"✅ Found page config for {uri}: {page_config.title}")
+        logger.info(f"✅ Found page config for {uri_str}: {page_config.title}")
         
         # Check if we have parsed content cached
-        if uri in self._content_cache:
-            logger.info(f"📦 Using cached content for {uri}")
-            parsed_content = self._content_cache[uri]
+        if uri_str in self._content_cache:
+            logger.info(f"📦 Using cached content for {uri_str}")
+            parsed_content = self._content_cache[uri_str]
         else:
             try:
                 logger.info(f"🌐 Fetching content from {page_config.url}")
@@ -71,9 +74,9 @@ class ResourceManager:
                     page_config.title
                 )
                 logger.info(f"✅ Parsed content: {len(parsed_content.sections)} sections")
-                self._content_cache[uri] = parsed_content
+                self._content_cache[uri_str] = parsed_content
             except Exception as e:
-                logger.error(f"❌ Failed to fetch/parse content for {uri}: {e}")
+                logger.error(f"❌ Failed to fetch/parse content for {uri_str}: {e}")
                 return None
         
         # Format content for MCP
@@ -82,12 +85,12 @@ class ResourceManager:
             logger.info(f"📝 Formatted content: {len(formatted_content)} chars")
             
             return types.TextResourceContents(
-                uri=uri,
+                uri=uri_str,
                 text=formatted_content,
                 mimeType="text/plain"
             )
         except Exception as e:
-            logger.error(f"❌ Failed to format content for {uri}: {e}")
+            logger.error(f"❌ Failed to format content for {uri_str}: {e}")
             return None
     
     def _format_content_for_mcp(self, parsed_content: ParsedContent, page_config: PageConfig) -> str:
@@ -192,7 +195,10 @@ class ResourceManager:
     
     async def refresh_resource(self, uri: str) -> bool:
         """Refresh cached content for a specific resource."""
-        page_config = PAGES_BY_URI.get(uri)
+        # Convert URI to string in case it's an AnyUrl object
+        uri_str = str(uri)
+        
+        page_config = PAGES_BY_URI.get(uri_str)
         if not page_config:
             return False
         
@@ -203,7 +209,7 @@ class ResourceManager:
                 page_data["content"], 
                 page_config.title
             )
-            self._content_cache[uri] = parsed_content
+            self._content_cache[uri_str] = parsed_content
             return True
         except Exception as e:
             print(f"Error refreshing {uri}: {e}")
